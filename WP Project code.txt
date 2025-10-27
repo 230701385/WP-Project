@@ -1,861 +1,1683 @@
-1) models/userModel.js
-
+//userModel.js
 const mongoose = require('mongoose');
 
-const userSchema = new mongoose.Schema(
-  {
-    firstName: {
-      type: String,
-      required: [true, 'First name is required'],
-      trim: true,
+const userSchema  = new mongoose.Schema({
+    firstName : {
+        type: String,
+        required: true,
+        trim: true,
+    } , 
+    lastName : {
+        type: String,
+        required: true,
+        trim: true,
+    } , 
+    mobileNumber : {
+        type: String,
+        required: true,
+        match: [/^\d{10}$/],
+        validate: {
+            validator: function(v) {
+                return v.length === 10;
+            },
+            message: props => `${props.value} is not a valid mobile number!`
+        }
     },
-    lastName: {
-      type: String,
-      required: [true, 'Last name is required'],
-      trim: true,
+    email : {
+        type: String,
+        required: true,
+        match : [/^[^\s@]+@[^\s@]+\.[^\s@]+$/],
+        validate: {
+            validator: function(v) {
+                return v.includes('@') && v.includes('.'); 
+            },
+            message: props => `${props.value} is not a valid email address!`
+        }
+    }, 
+    role : {
+        type: String,
+        requried: true
     },
-    mobileNumber: {
-      type: String,
-      required: [true, 'Mobile number is required'],
-      validate: {
-        validator: function (v) {
-          // allow digits only, length 10-15
-          return /^\d{10,15}$/.test(v);
-        },
-        message: 'is not a valid mobile number',
-      },
-    },
-    email: {
-      type: String,
-      required: [true, 'Email is required'],
-      lowercase: true,
-      trim: true,
-      validate: {
-        validator: function (v) {
-          // simple email regex
-          return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
-        },
-        message: 'is not a valid email address',
-      },
-    },
-    role: {
-      type: String,
-      enum: ['user', 'manager', 'employee', 'admin'],
-      default: 'user',
-      required: [true, 'Role is required'],
-    },
-    password: {
-      type: String,
-      required: [true, 'Password is required'],
-      minlength: [6, 'is shorter than the minimum allowed length'],
-      maxlength: [255, 'is longer than the maximum allowed length'],
-    },
-  },
-  { timestamps: true }
-);
+    password : {
+        type: String,
+        required: true,
+        minlength: 6,
+        maxlength: 255
+    }
+})
 
-module.exports = mongoose.model('User', userSchema);
+module.exports = mongoose.model("User", userSchema);
 
-
-2) models/eyewearProduct.js
+//productModel.js
 const mongoose = require('mongoose');
 
-const eyewearSchema = new mongoose.Schema(
-  {
-    name: {
-      type: String,
-      required: [true, 'Product name is required'],
-      trim: true,
+const eyewearProductSchema  = new mongoose.Schema({
+    name : {
+        type: String,
+        required: true,
+        trim: true,
+        maxlength: 100,
+    } , 
+    description : {
+        type: String,
+        required: true,
+        maxlength: 1000,
+    } , 
+    category : {
+        type: String,
+        required: true,
+        enum : ['Eyeglasses', 'Sunglasses', 'Contact Lenses', 'Accessories'],
     },
-    description: {
-      type: String,
-      required: [true, 'Description is required'],
-      trim: true,
+    brand : {
+        type: String,
+        required: true,
+        trim: true,
+    }, 
+    price : {
+        type: Number,
+        requried: true,
+        min: 0,
     },
-    category: {
-      type: String,
-      required: [true, 'Category is required'],
-      enum: ['Sunglasses', 'Eyeglasses', 'Contact Lenses', 'Accessories'],
+    availability : {
+        type: Boolean,
+        default: true,
     },
-    brand: {
-      type: String,
-      required: [true, 'Brand is required'],
-      trim: true,
+    frameType : {
+        type: String,
+        enum: ['Full-Rim', 'Half-Rim', 'Rimless']
     },
-    price: {
-      type: Number,
-      required: [true, 'Price is required'],
-      min: [0, 'Price must be a positive number'],
+    gender : {
+        type: String,
+        default: 'Unisex',
+        enum : ['Men', 'Women', 'Unisex']
     },
-    availability: {
-      type: Boolean,
-      default: true,
+    imageUrl : {
+        type: "String"
     },
-    frameType: {
-      type: String,
-      enum: ['Full-Rim', 'Half-Rim', 'Rimless', 'Other'],
-      default: 'Full-Rim',
-    },
-    gender: {
-      type: String,
-      enum: ['Male', 'Female', 'Unisex'],
-      default: 'Unisex',
-    },
-    imageUrl: {
-      type: String,
-      validate: {
-        validator: function (v) {
-          if (!v) return true; // optional
-          // simple url regex
-          return /^(https?:\/\/).+\.(jpg|jpeg|png|gif|webp)$/i.test(v);
-        },
-        message: 'imageUrl must be a valid URL to an image',
-      },
-    },
-    userId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-      required: [true, 'userId is required'],
-    },
-  },
-  { timestamps: true }
-);
-
-module.exports = mongoose.model('EyewearProduct', eyewearSchema);
-
-
-3) authUtils.js
-
-
-// simple token validator used by backend tests
-// tests expect that when an invalid token (or no token) is provided, the middleware responds with 400 and message 'Authentication failed'.
-// For testing convenience we consider the token string 'valid-token' as valid.
-// In real deployment replace with proper JWT verification.
-
-function validateToken(req, res, next) {
-  try {
-    const token = req.header('Authorization');
-    if (!token) {
-      return res.status(400).json({ message: 'Authentication failed' });
+    userId : {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: true,
     }
+})
 
-    // simple check for a known valid token for tests
-    // tests pass invalid tokens / null and expect 400; they don't assert the valid path explicitly.
-    if (token !== 'valid-token') {
-      return res.status(400).json({ message: 'Authentication failed' });
+module.exports = mongoose.model("EyewearProductSchema", eyewearProductSchema);
+
+
+//userController.js
+const User = require('../models/userModel');
+const generateToken = require('../authUtils');
+
+const addUser = async (req,res) => {
+    try {
+        const newUser = await User.create(req.body);
+        res.status(201).json({message: "Success"});
+    } catch(error) {
+        res.status(500).json({message: error.message});
     }
+};
 
-    // attach a dummy user payload so controllers can use req.user if needed
-    req.user = { id: 'test-user-id' };
-    return next();
-  } catch (err) {
-    return res.status(400).json({ message: 'Authentication failed' });
-  }
+const getUserByUsernameAndPassword = async (req,res) => {
+    try {
+        const {email, password} = req.body;
+
+        const user = await User.findOne({ email, password});
+        if(user){
+            const token = generateToken(user._id);
+            res.status(200).json({user, token});
+        } else {
+            res.status(200).json({message: 'Invalid Credentials'});
+        }
+    } catch(error) {
+        res.status(500).json({message: error.message});
+    }
+};
+
+const getAllUsers = async (req,res) => {
+    try {
+        const users = await User.find();
+        res.status(200).json(users);
+    } catch(error) {
+        res.status(500).json({message: error.message});
+    }
+};
+
+module.exports = { addUser, getUserByUsernameAndPassword, getAllUsers };
+
+
+//productController.js
+const Product = require('../models/eyewearProduct');
+const generateToken = require('../authUtils');
+
+const addProduct = async (req,res) => {
+    try {
+        const newProduct = await Product.create(req.body);
+        res.status(201).json({message: "Product Added Successfully"});
+    } catch(error) {
+        res.status(500).json({message: error.message});
+    }
+};
+
+const getProductById = async (req,res) => {
+    try {
+        const { id } = req.params;
+
+        const product = await Product.findById(id);
+        if(product){
+            res.status(200).json(product);
+        } else {
+            res.status(404).json({message: 'Product not found'});
+        }
+    } catch(error) {
+        res.status(500).json({message: error.message});
+    }
+};
+
+const getAllProdutcs = async (req,res) => {
+    try {
+        const searchValue = req.query?.searchValue || '';
+        const sortValue = parseInt(req.query?.sortValue, 10);
+
+        const searchRegex = new RegExp(searchValue, 'i');
+
+        const filter = {
+            $or: [
+                { name: searchRegex},
+                {description: searchRegex}
+            ]
+        };
+
+        let sortOrder = 1;
+        if(sortValue === -1)
+            sortOrder = -1;
+
+        const products = await Product.find(filter).sort({ price: sortOrder});
+        res.status(200).json(products);
+    } catch(error) {
+        res.status(500).json({message: error.message});
+    }
+};
+
+const getProductsByUserId = async (req,res) => {
+    try {
+        const userId = req.body?.userId;
+        const searchValue = req.query?.searchValue || '';
+        const sortValue = parseInt(req.query?.sortValue, 10);
+
+        const searchRegex = new RegExp(searchValue, 'i');
+
+        const filter = {
+            userId,
+            $or: [
+                { name: searchRegex},
+                {description: searchRegex}
+            ]
+        };
+
+        let sortOrder = 1;
+        if(sortValue === -1)
+            sortOrder = -1;
+
+        const products = await Product.find(filter).sort({ price: sortOrder});
+        res.status(200).json(products);
+    } catch(error) {
+        res.status(500).json({message: error.message});
+    }
+};
+
+const updateProduct = async (req,res) => {
+    try{
+        const { id } = req.params;
+        const updateData = req.body;
+
+        const updatedProduct = await Product.findByIdAndUpdate(id, updateData, {
+            new: true,
+            runValidators: true
+        });
+
+        if(!updatedProduct){
+            res.status(404).json({message: 'Product not found'});
+        }
+        res.status(200).json({message: 'Product Updated Successfully'});
+    } catch(error) {
+        res.status(500).json({message: error.message});
+    }
 }
 
-module.exports = { validateToken };
+const deleteProduct = async (req,res) => {
+    try {
+        const { id } = req.params;
 
-
-4) controllers/userController.js
-
-const User = require('../models/userModel');
-const bcrypt = require('bcryptjs');
-
-// CREATE USER
-exports.createUser = async (req, res) => {
-  try {
-    const { firstName, lastName, mobileNumber, email, role, password } = req.body;
-    if (!firstName || !lastName || !mobileNumber || !email || !role || !password) {
-      return res.status(400).json({ message: 'All fields are required' });
+        const deletedProduct = await Product.findByIdAndDelete(id);
+        if(!deletedProduct){
+            res.status(404).json({message: 'Product not found'});
+        }
+        res.status(200).json({message: 'Product Deleted Successfully'});
+    } catch(error) {
+        res.status(500).json({message: error.message});
     }
+}
 
-    const existing = await User.findOne({ email });
-    if (existing) {
-      return res.status(400).json({ message: 'User already exists' });
-    }
-
-    const hashed = await bcrypt.hash(password, 10);
-    const user = await User.create({
-      firstName,
-      lastName,
-      mobileNumber,
-      email,
-      role,
-      password: hashed,
-    });
-
-    return res.status(201).json({
-      message: 'User created successfully',
-      user,
-    });
-  } catch (err) {
-    return res.status(500).json({ message: err.message });
-  }
-};
-
-// GET ALL USERS
-exports.getAllUsers = async (req, res) => {
-  try {
-    const users = await User.find();
-    return res.status(200).json({
-      message: 'Users fetched successfully',
-      users,
-    });
-  } catch (err) {
-    return res.status(500).json({ message: err.message });
-  }
-};
-
-// GET USER BY ID
-exports.getUserById = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const user = await User.findById(id);
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-    return res.status(200).json({ message: 'User fetched successfully', user });
-  } catch (err) {
-    return res.status(500).json({ message: err.message });
-  }
-};
-
-// UPDATE USER
-exports.updateUser = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const updated = await User.findByIdAndUpdate(id, req.body, { new: true, runValidators: true });
-    if (!updated) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-    return res.status(200).json({ message: 'User updated successfully', user: updated });
-  } catch (err) {
-    return res.status(500).json({ message: err.message });
-  }
-};
-
-// DELETE USER
-exports.deleteUser = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const deleted = await User.findByIdAndDelete(id);
-    if (!deleted) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-    return res.status(200).json({ message: 'User deleted successfully' });
-  } catch (err) {
-    return res.status(500).json({ message: err.message });
-  }
-};
+module.exports = { addProduct, getProductById, getAllProdutcs, getProductsByUserId, updateProduct, deleteProduct };
 
 
-
-
-5) controllers/eyewearProductController.js
-
-
-const EyewearProduct = require('../models/eyewearProduct');
-
-// CREATE PRODUCT
-exports.createProduct = async (req, res) => {
-  try {
-    const { name, description, category, brand, price, availability, frameType, gender, imageUrl, userId } = req.body;
-
-    if (!name || !description || !category || !brand || price == null || !userId) {
-      return res.status(400).json({ message: 'Missing required fields' });
-    }
-
-    const product = await EyewearProduct.create({
-      name,
-      description,
-      category,
-      brand,
-      price,
-      availability,
-      frameType,
-      gender,
-      imageUrl,
-      userId,
-    });
-
-    return res.status(201).json({
-      message: 'Product created successfully',
-      product,
-    });
-  } catch (err) {
-    return res.status(500).json({ message: err.message });
-  }
-};
-
-// GET ALL PRODUCTS
-exports.getAllProducts = async (req, res) => {
-  try {
-    const products = await EyewearProduct.find();
-    return res.status(200).json({
-      message: 'Products fetched successfully',
-      products,
-    });
-  } catch (err) {
-    return res.status(500).json({ message: err.message });
-  }
-};
-
-// GET PRODUCT BY ID
-exports.getProductById = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const product = await EyewearProduct.findById(id);
-    if (!product) {
-      return res.status(404).json({ message: 'Product not found' });
-    }
-    return res.status(200).json({ message: 'Product fetched successfully', product });
-  } catch (err) {
-    return res.status(500).json({ message: err.message });
-  }
-};
-
-// UPDATE PRODUCT
-exports.updateProduct = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const updated = await EyewearProduct.findByIdAndUpdate(id, req.body, { new: true, runValidators: true });
-    if (!updated) {
-      return res.status(404).json({ message: 'Product not found' });
-    }
-    return res.status(200).json({ message: 'Product updated successfully', product: updated });
-  } catch (err) {
-    return res.status(500).json({ message: err.message });
-  }
-};
-
-// DELETE PRODUCT
-exports.deleteProduct = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const deleted = await EyewearProduct.findByIdAndDelete(id);
-    if (!deleted) {
-      return res.status(404).json({ message: 'Product not found' });
-    }
-    return res.status(200).json({ message: 'Product deleted successfully' });
-  } catch (err) {
-    return res.status(500).json({ message: err.message });
-  }
-};
-
-
-
-6) routes/userRoutes.js
-
+//userRouter.js
 const express = require('express');
 const router = express.Router();
+
 const userController = require('../controllers/userController');
 const { validateToken } = require('../authUtils');
 
-// routes for users
-router.post('/', userController.createUser);
-router.get('/', validateToken, userController.getAllUsers);
-router.get('/:id', validateToken, userController.getUserById);
-router.put('/:id', validateToken, userController.updateUser);
-router.delete('/:id', validateToken, userController.deleteUser);
+router.use(validateToken);
+
+router.post('/user/signup', userController.addUser);
+router.post('/user/login', userController.getUserByUsernameAndPassword);
+router.get('/user/getAllUsers', userController.getAllUsers);
+
 
 module.exports = router;
 
 
-7)routes/productRoutes.js
+//productRouter.js
 
 const express = require('express');
 const router = express.Router();
+
 const productController = require('../controllers/eyewearProductController');
 const { validateToken } = require('../authUtils');
 
-// routes for eyewear products
-router.post('/', validateToken, productController.createProduct);
-router.get('/', validateToken, productController.getAllProducts);
-router.get('/:id', validateToken, productController.getProductById);
-router.put('/:id', validateToken, productController.updateProduct);
-router.delete('/:id', validateToken, productController.deleteProduct);
+router.use(validateToken);
+
+router.post('/products/addProduct', productController.addProduct);
+router.post('/products/getAllProducts', productController.getAllProdutcs);
+router.post('/products/getProductsByUserId', productController.getProductsByUserId);
+router.get('/products/getProductById/:id', productController.getProductById);
+router.put('/products/updateProduct/:id', productController.updateProduct);
+router.delete('/products/deleteProduct/:id', productController.deleteProduct);
 
 module.exports = router;
 
 
-8)app.js
-
+//index.js
 const express = require('express');
-const mongoose = require('mongoose');
+const mongoose  = require('mongoose');
 const cors = require('cors');
 
-const userRoutes = require('./routes/userRoutes');
-const productRoutes = require('./routes/productRoutes');
+const userRoutes = require('./routers/userRouter');
+const productRoutes = require('./routers/eyewearProductRouter');
 
 const app = express();
-
-// middleware
-app.use(cors());
 app.use(express.json());
 
-// routes
-app.use('/api/users', userRoutes);
-app.use('/api/products', productRoutes);
-
-// health check
-app.get('/', (req, res) => {
-  res.status(200).json({ message: 'Server is running' });
-});
-
-// error handling middleware (fallback)
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  return res.status(500).json({ message: 'Something went wrong' });
-});
-
-module.exports = app;
-
-
-9) server.js
-
-const app = require('./app');
-const mongoose = require('mongoose');
-require('dotenv').config();
-
-const PORT = process.env.PORT || 5000;
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/eyewearDB';
-
-mongoose
-  .connect(MONGO_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  })
-  .then(() => {
-    console.log('MongoDB connected');
-    app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-  })
-  .catch((err) => {
-    console.error('MongoDB connection failed:', err.message);
-  });
-
-
-
-10) src/components/Login.jsx
-
-
-import React, { useState } from "react";
-import "bootstrap/dist/css/bootstrap.min.css";
-
-const Login = () => {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    console.log("Logged in:", { email, password });
-  };
-
-  return (
-    <div className="d-flex justify-content-center align-items-center vh-100 bg-light">
-      <div className="card p-4 shadow-lg" style={{ width: "22rem" }}>
-        <h2 className="text-center mb-3">Login</h2>
-        <form onSubmit={handleSubmit}>
-          <div className="mb-3">
-            <label htmlFor="email" className="form-label">
-              Email address
-            </label>
-            <input
-              id="email"
-              type="email"
-              className="form-control"
-              placeholder="Enter your email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-          </div>
-
-          <div className="mb-3">
-            <label htmlFor="password" className="form-label">
-              Password
-            </label>
-            <input
-              id="password"
-              type="password"
-              className="form-control"
-              placeholder="Enter your password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-          </div>
-
-          <button type="submit" className="btn btn-primary w-100">
-            Login
-          </button>
-        </form>
-      </div>
-    </div>
-  );
+const corsOptions = {
+    origin: "*",
+    methods : ['GET','POST','PUT','DELETE','OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true
 };
+
+app.use(cors(corsOptions));
+
+mongoose.connect('mongodb://127.0.0.1:27017/eyeweardb', {
+    useNewUrlParser: true,
+    useUnifiedTopology: true
+})
+.then(()=> console.log('Mongodb connected successfully'))
+.catch(err => console.error('Connecttion error'));
+
+app.use('/', userRoutes);
+app.use('/', productRoutes);
+
+app.listen(8080, () =>{
+    console.log('Server running on port 8080');    
+})
+
+
+//Login.jsx
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
+import './Login.css';
+
+function Login() {
+    const navigate = useNavigate();
+
+    const [formData, setFormData] = useState({
+        email: '',
+        password: ''
+    });
+
+    const [formErrors, setFormErrors] = useState({});
+    const [loginError, setLoginError] = useState('');
+
+    const handleChange = (e) => {
+        setFormData({
+            ...formData,
+            [e.target.name]: e.target.value
+        });
+    };
+    
+    const validate = () => {
+        const errors = {};
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+        if(!formData.email.trim()) {
+            errors.email = 'Email is required';
+        } else if(!emailRegex.test(formData.email)) {
+            errors.email = 'Invalid email format';
+        }
+
+        if(!formData.password.trim()){
+            errors.password = 'Password is required';
+        } else if(formData.password.length < 6){
+            errors.password = 'Password must be at least 6 characters';
+        }
+
+        setFormErrors(errors);
+        return Object.keys(errors).length === 0;
+    }    
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setLoginError('');
+
+        if(!validate()) 
+            return;
+
+        try {
+            const response = await axios.post('http://localhost:8080/user/login', formData);
+
+            if(response.data.message === 'Invalid credentials') {
+                setLoginError('Invalid email or password');
+                return;
+            }
+
+            const { token, user } = response.data;
+
+            localStorage.setItem('token', token);
+            localStorage.setItem('userId', user._id);
+            localStorage.setItem('userName', user.name);
+            localStorage.setItem('role', user.role);
+
+            if(user.role === 'Manager') {
+                navigate('/manage-products');
+            } else if(user.role === 'Employeee'){
+                navigate('/product-catalog');
+            } else {
+                navigate('/');
+            }
+        } catch(error) {
+            console.error(error);
+            navigate('/error');
+        }
+    };
+
+    return (
+        <div className='login-container'>
+            <div className='login-form-section'>
+                <h2>Login</h2>
+
+                <form onSubmit={handleSubmit} className='login-form'>
+
+                    <div className='form-group'>
+                        <label>Email</label>
+                        <input
+                            type='email'
+                            name='email'
+                            value={formData.email}
+                            onChange={handleChange}
+                            placeholder='Enter your email'
+                        />
+                        {formErrors.email && <p className='error'>{formErrors.email}</p>}
+                    </div>
+
+                    <div className='form-group'>
+                        <label>Password</label>
+                        <input
+                            type='password'
+                            name='password'
+                            value={formData.password}
+                            onChange={handleChange}
+                            placeholder='Enter your password'
+                        />
+                        {formErrors.password && <p className='error'>{formErrors.password}</p>}
+                    </div>
+
+                    <button type='submit' className='login-button'>Login</button>
+
+                    {loginError && <p className='error'>{loginError}</p>}
+
+                    <p className='signup-link'>Don't have an account? <span onClick={() => navigate('/register')}>Signup</span></p>
+                </form>
+            </div>
+
+            <div className='login-branding-section'>
+                <h3>Welcome back!</h3>
+                <p>Access your dashboard and manage your products efficiently.</p>
+            </div>
+        </div>
+    );
+}
 
 export default Login;
 
+//Login.css
 
-11) src/components/Register.jsx
+.login-container {
+    display: flex;
+    height: 100vh;
+    font-family: 'Poppins', sans-serif;
+}
 
-import React, { useState } from "react";
-import "bootstrap/dist/css/bootstrap.min.css";
+.login-form-section, .login-branding-section {
+    flex: 1;
+    padding: 50px;
+}
 
-const Register = () => {
-  const [form, setForm] = useState({
-    firstName: "",
-    lastName: "",
-    email: "",
-    mobileNumber: "",
-    password: "",
+.login-form-section {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.login-form h2 {
+    margin-bottom: 20px;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+input {
+    width: 100%;
+    padding: 10px;
+    margin-top: 5px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+.login-button {
+    width: 100%;
+    padding: 10px;
+    margin-top: 10px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;   
+}
+
+.login-button:hover {
+    background-color: #0056b3;
+}
+
+.error {
+    color: red;
+    font-size: 0.9rem;
+    margin-top: 5px;
+}
+
+.signup-link span {
+    color: #007bff;
+    cursor: pointer;
+    text-decoration: underline;
+}
+
+.login-branding-section {
+    background-color: #f0f4ff;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    color: #333;
+}
+
+//Register.jsx
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
+import './Register.css'; // optional CSS file
+
+function Register() {
+  const navigate = useNavigate();
+
+  // ✅ State management
+  const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
+    mobileNumber: '',
+    email: '',
+    role: 'Manager', // default role
+    password: '',
+    confirmPassword: ''
   });
 
+  const [formErrors, setFormErrors] = useState({});
+  const [showSuccessPopup, setShowSuccessPopup] = useState(false);
+
+  // ✅ Handle input changes
   const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value
+    });
   };
 
-  const handleSubmit = (e) => {
+  // ✅ Validation logic
+  const validate = () => {
+    const errors = {};
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const mobileRegex = /^\d{10}$/;
+
+    if (!formData.firstName.trim()) errors.firstName = 'First name is required';
+    if (!formData.lastName.trim()) errors.lastName = 'Last name is required';
+    if (!formData.mobileNumber.trim()) {
+      errors.mobileNumber = 'Mobile number is required';
+    } else if (!mobileRegex.test(formData.mobileNumber)) {
+      errors.mobileNumber = 'Mobile number must be exactly 10 digits';
+    }
+    if (!formData.email.trim()) {
+      errors.email = 'Email is required';
+    } else if (!emailRegex.test(formData.email)) {
+      errors.email = 'Invalid email format';
+    }
+    if (!formData.password.trim()) {
+      errors.password = 'Password is required';
+    } else if (formData.password.length < 6) {
+      errors.password = 'Password must be at least 6 characters';
+    }
+    if (!formData.confirmPassword.trim()) {
+      errors.confirmPassword = 'Please confirm your password';
+    } else if (formData.password !== formData.confirmPassword) {
+      errors.confirmPassword = 'Passwords do not match';
+    }
+
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  // ✅ Form submission
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Registered:", form);
+    if (!validate()) return;
+
+    try {
+      const payload = {
+        name: `${formData.firstName} ${formData.lastName}`,
+        mobileNumber: formData.mobileNumber,
+        email: formData.email,
+        password: formData.password,
+        role: formData.role
+      };
+
+      const response = await axios.post('http://localhost:8080/user/signup', payload);
+
+      if (response.status === 200 || response.status === 201) {
+        setShowSuccessPopup(true);
+      } else {
+        navigate('/error');
+      }
+    } catch (error) {
+      console.error('Registration failed:', error);
+      navigate('/error');
+    }
+  };
+
+  // ✅ Handle popup close
+  const handlePopupClose = () => {
+    setShowSuccessPopup(false);
+    navigate('/login');
   };
 
   return (
-    <div className="d-flex justify-content-center align-items-center vh-100 bg-light">
-      <div className="card p-4 shadow-lg" style={{ width: "25rem" }}>
-        <h2 className="text-center mb-3">Create Your Account</h2>
-        <form onSubmit={handleSubmit}>
-          <div className="row">
-            <div className="col mb-3">
-              <input
-                type="text"
-                className="form-control"
-                placeholder="First Name"
-                name="firstName"
-                value={form.firstName}
-                onChange={handleChange}
-                required
-              />
-            </div>
-            <div className="col mb-3">
-              <input
-                type="text"
-                className="form-control"
-                placeholder="Last Name"
-                name="lastName"
-                value={form.lastName}
-                onChange={handleChange}
-                required
-              />
-            </div>
+    <div className="register-container">
+      {/* Left side: form */}
+      <div className="register-form-section">
+        <h2>Register</h2>
+
+        <form onSubmit={handleSubmit} className="register-form">
+          {/* First Name */}
+          <div className="form-group">
+            <label>First Name</label>
+            <input
+              type="text"
+              name="firstName"
+              value={formData.firstName}
+              onChange={handleChange}
+              placeholder="Enter first name"
+            />
+            {formErrors.firstName && <p className="error">{formErrors.firstName}</p>}
           </div>
 
-          <div className="mb-3">
+          {/* Last Name */}
+          <div className="form-group">
+            <label>Last Name</label>
+            <input
+              type="text"
+              name="lastName"
+              value={formData.lastName}
+              onChange={handleChange}
+              placeholder="Enter last name"
+            />
+            {formErrors.lastName && <p className="error">{formErrors.lastName}</p>}
+          </div>
+
+          {/* Mobile */}
+          <div className="form-group">
+            <label>Mobile Number</label>
+            <input
+              type="text"
+              name="mobileNumber"
+              value={formData.mobileNumber}
+              onChange={handleChange}
+              placeholder="Enter 10-digit mobile number"
+            />
+            {formErrors.mobileNumber && <p className="error">{formErrors.mobileNumber}</p>}
+          </div>
+
+          {/* Email */}
+          <div className="form-group">
+            <label>Email</label>
             <input
               type="email"
-              className="form-control"
-              placeholder="Email Address"
               name="email"
-              value={form.email}
+              value={formData.email}
               onChange={handleChange}
-              required
+              placeholder="Enter your email"
             />
+            {formErrors.email && <p className="error">{formErrors.email}</p>}
           </div>
 
-          <div className="mb-3">
-            <input
-              type="text"
-              className="form-control"
-              placeholder="Mobile Number"
-              name="mobileNumber"
-              value={form.mobileNumber}
-              onChange={handleChange}
-              required
-            />
+          {/* Role */}
+          <div className="form-group">
+            <label>Role</label>
+            <select name="role" value={formData.role} onChange={handleChange}>
+              <option value="Manager">Manager</option>
+              <option value="Employee">Employee</option>
+            </select>
           </div>
 
-          <div className="mb-3">
+          {/* Password */}
+          <div className="form-group">
+            <label>Password</label>
             <input
               type="password"
-              className="form-control"
-              placeholder="Password"
               name="password"
-              value={form.password}
+              value={formData.password}
               onChange={handleChange}
-              required
+              placeholder="Enter password"
             />
+            {formErrors.password && <p className="error">{formErrors.password}</p>}
           </div>
 
-          <button type="submit" className="btn btn-success w-100">
-            Register
-          </button>
+          {/* Confirm Password */}
+          <div className="form-group">
+            <label>Confirm Password</label>
+            <input
+              type="password"
+              name="confirmPassword"
+              value={formData.confirmPassword}
+              onChange={handleChange}
+              placeholder="Re-enter password"
+            />
+            {formErrors.confirmPassword && <p className="error">{formErrors.confirmPassword}</p>}
+          </div>
+
+          {/* Submit Button */}
+          <button type="submit" className="register-button">Register</button>
+
+          {/* Navigation Link */}
+          <p className="login-link">
+            Already have an account?{' '}
+            <span onClick={() => navigate('/login')}>Login</span>
+          </p>
         </form>
       </div>
+
+      {/* Right side: branding */}
+      <div className="register-branding-section">
+        <h3>Eyewear Catalog</h3>
+        <p>Discover stylish eyewear and manage your inventory efficiently.</p>
+      </div>
+
+      {/* Success Popup Modal */}
+      {showSuccessPopup && (
+        <div className="popup-overlay">
+          <div className="popup-content">
+            <h3>Registration Successful</h3>
+            <p>You can now login with your credentials.</p>
+            <button onClick={handlePopupClose}>Go to Login</button>
+          </div>
+        </div>
+      )}
     </div>
   );
-};
+}
 
 export default Register;
+.register-container {
+  display: flex;
+  height: 100vh;
+  font-family: 'Poppins', sans-serif;
+}
+
+.register-form-section, .register-branding-section {
+  flex: 1;
+  padding: 50px;
+}
+
+.register-form-section {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.register-form h2 {
+  margin-bottom: 20px;
+}
+
+.form-group {
+  margin-bottom: 15px;
+}
+
+input, select {
+  width: 100%;
+  padding: 10px;
+  margin-top: 5px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.register-button {
+  width: 100%;
+  padding: 10px;
+  margin-top: 15px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.register-button:hover {
+  background-color: #0056b3;
+}
+
+.error {
+  color: red;
+  font-size: 0.9rem;
+  margin-top: 5px;
+}
+
+.login-link span {
+  color: #007bff;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.register-branding-section {
+  background-color: #f0f4ff;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  color: #333;
+}
+
+/* Popup Modal */
+.popup-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.4);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.popup-content {
+  background: white;
+  padding: 30px 40px;
+  border-radius: 10px;
+  text-align: center;
+}
+
+.popup-content h3 {
+  margin-bottom: 10px;
+}
+
+.popup-content button {
+  margin-top: 10px;
+  padding: 8px 15px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.popup-content button:hover {
+  background-color: #0056b3;
+}
 
 
+//ErrorPage.jsx
 
-12) src/components/ErrorPage.jsx
+import React from 'react';
+import './ErrorPage.css'; // optional styling file
 
-
-import React from "react";
-import "bootstrap/dist/css/bootstrap.min.css";
-
-const ErrorPage = () => {
+function ErrorPage() {
   return (
-    <div className="d-flex justify-content-center align-items-center vh-100 bg-danger-subtle">
-      <div className="text-center">
-        <h1 className="display-4 text-danger fw-bold">404</h1>
-        <p className="lead">Page Not Found</p>
-        <a href="/" className="btn btn-outline-danger mt-3">
-          Go Home
-        </a>
+    <div className="parent">
+      <div className="error-container">
+        <h1 className="htag">Something Went Wrong</h1>
+        <p className="ptag">
+          We're sorry, but an error occurred. Please try again later.
+        </p>
       </div>
     </div>
   );
-};
+}
 
 export default ErrorPage;
+.parent {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background-color: #f9f9fb;
+  font-family: 'Poppins', sans-serif;
+}
 
+.error-container {
+  text-align: center;
+  padding: 40px 60px;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  background: white;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
 
+.htag {
+  color: #ff3b3b;
+  font-size: 2rem;
+  margin-bottom: 15px;
+}
 
-13) src/manager/CreateProduct.jsx
+.ptag {
+  color: #555;
+  font-size: 1.1rem;
+}
 
-import React, { useState } from "react";
-import "bootstrap/dist/css/bootstrap.min.css";
+//DisplayProduct.jsx
+import React, { useEffect, useState } from 'react';
+import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
+import './DisplayProduct.css';
 
-const CreateProduct = () => {
-  const [form, setForm] = useState({
-    name: "",
-    description: "",
-    category: "Sunglasses",
-    brand: "",
-    price: "",
-    availability: true,
-    frameType: "Full-Rim",
-    gender: "Unisex",
-    imageUrl: "",
-  });
+function DisplayProduct() {
+  const navigate = useNavigate();
 
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setForm({ ...form, [name]: type === "checkbox" ? checked : value });
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    console.log("Product created:", form);
-    alert("Product created successfully!");
-  };
-
-  return (
-    <div className="container mt-5">
-      <h2 className="text-center mb-4">Create Product</h2>
-      <form
-        className="card p-4 shadow mx-auto"
-        style={{ maxWidth: "40rem" }}
-        onSubmit={handleSubmit}
-      >
-        <div className="mb-3">
-          <label className="form-label">Product Name</label>
-          <input
-            type="text"
-            name="name"
-            className="form-control"
-            placeholder="Enter product name"
-            value={form.name}
-            onChange={handleChange}
-            required
-          />
-        </div>
-
-        <div className="mb-3">
-          <label className="form-label">Description</label>
-          <textarea
-            name="description"
-            className="form-control"
-            rows="2"
-            placeholder="Enter product description"
-            value={form.description}
-            onChange={handleChange}
-            required
-          ></textarea>
-        </div>
-
-        <div className="row mb-3">
-          <div className="col">
-            <label className="form-label">Category</label>
-            <select
-              className="form-select"
-              name="category"
-              value={form.category}
-              onChange={handleChange}
-            >
-              <option>Sunglasses</option>
-              <option>Eyeglasses</option>
-              <option>Contact Lenses</option>
-              <option>Accessories</option>
-            </select>
-          </div>
-          <div className="col">
-            <label className="form-label">Brand</label>
-            <input
-              type="text"
-              name="brand"
-              className="form-control"
-              placeholder="Enter brand"
-              value={form.brand}
-              onChange={handleChange}
-              required
-            />
-          </div>
-        </div>
-
-        <div className="row mb-3">
-          <div className="col">
-            <label className="form-label">Price (₹)</label>
-            <input
-              type="number"
-              name="price"
-              className="form-control"
-              placeholder="Enter price"
-              value={form.price}
-              onChange={handleChange}
-              required
-            />
-          </div>
-          <div className="col">
-            <label className="form-label">Availability</label>
-            <div className="form-check">
-              <input
-                className="form-check-input"
-                type="checkbox"
-                name="availability"
-                checked={form.availability}
-                onChange={handleChange}
-              />
-              <label className="form-check-label">Available</label>
-            </div>
-          </div>
-        </div>
-
-        <div className="row mb-3">
-          <div className="col">
-            <label className="form-label">Frame Type</label>
-            <select
-              className="form-select"
-              name="frameType"
-              value={form.frameType}
-              onChange={handleChange}
-            >
-              <option>Full-Rim</option>
-              <option>Half-Rim</option>
-              <option>Rimless</option>
-              <option>Other</option>
-            </select>
-          </div>
-          <div className="col">
-            <label className="form-label">Gender</label>
-            <select
-              className="form-select"
-              name="gender"
-              value={form.gender}
-              onChange={handleChange}
-            >
-              <option>Unisex</option>
-              <option>Male</option>
-              <option>Female</option>
-            </select>
-          </div>
-        </div>
-
-        <div className="mb-3">
-          <label className="form-label">Image URL</label>
-          <input
-            type="url"
-            name="imageUrl"
-            className="form-control"
-            placeholder="https://example.com/image.jpg"
-            value={form.imageUrl}
-            onChange={handleChange}
-          />
-        </div>
-
-        <button type="submit" className="btn btn-primary w-100">
-          Create Product
-        </button>
-      </form>
-    </div>
-  );
-};
-
-export default CreateProduct;
-
-
-14) src/manager/ManageProducts.jsx
-
-import React, { useEffect, useState } from "react";
-import "bootstrap/dist/css/bootstrap.min.css";
-
-const ManageProducts = () => {
+  // ✅ State Management
   const [products, setProducts] = useState([]);
-  const [search, setSearch] = useState("");
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortValue, setSortValue] = useState(1);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [showPopup, setShowPopup] = useState(false);
 
-  // dummy load
+  // ✅ Fetch Data Function
+  const fetchData = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        navigate('/login');
+        return;
+      }
+
+      // 1️⃣ Fetch all users
+      const userRes = await axios.get('http://localhost:8080/user/getAllUsers', {
+        headers: { Authorization: token }
+      });
+
+      // 2️⃣ Fetch all products
+      const productRes = await axios.get(
+        `http://localhost:8080/product/getAllProducts?searchValue=${searchTerm}&sortValue=${sortValue}`,
+        { headers: { Authorization: token } }
+      );
+
+      const users = userRes.data;
+      const productsData = productRes.data;
+
+      // 3️⃣ Enrich product data with user info
+      const enrichedProducts = productsData.map((product) => {
+        const user = users.find((u) => u._id === product.userId);
+        return {
+          ...product,
+          userName: user ? user.name : 'Unknown',
+          userEmail: user ? user.email : 'N/A',
+          userPhone: user ? user.mobileNumber : 'N/A'
+        };
+      });
+
+      setProducts(enrichedProducts);
+    } catch (error) {
+      console.error('Error fetching products:', error);
+      navigate('/error');
+    }
+  };
+
+  // ✅ Fetch data on component mount & when search/sort changes
   useEffect(() => {
-    setProducts([
-      { _id: 1, name: "Aviator", category: "Sunglasses", brand: "RayBan", price: 2999 },
-      { _id: 2, name: "Spectra", category: "Eyeglasses", brand: "Lenskart", price: 1999 },
-    ]);
-  }, []);
+    fetchData();
+    // eslint-disable-next-line
+  }, [searchTerm, sortValue]);
 
-  const filtered = products.filter((p) =>
-    p.name.toLowerCase().includes(search.toLowerCase())
-  );
+  // ✅ Logout handler
+  const handleLogout = () => {
+    localStorage.clear();
+    navigate('/login');
+  };
 
-  const handleDelete = (id) => {
-    setProducts(products.filter((p) => p._id !== id));
-    alert("Product deleted successfully!");
+  // ✅ Open popup
+  const handleViewInfo = (product) => {
+    setSelectedProduct(product);
+    setShowPopup(true);
+  };
+
+  // ✅ Close popup
+  const closePopup = () => {
+    setShowPopup(false);
+    setSelectedProduct(null);
   };
 
   return (
-    <div className="container mt-5">
-      <h2 className="text-center mb-4">Manage Products</h2>
+    <div className="product-list-container">
+      {/* Header */}
+      <div className="header-section">
+        <h1>Eyewear Catalog</h1>
+        <button className="logout-button" onClick={handleLogout}>Logout</button>
+      </div>
 
-      <input
-        type="text"
-        className="form-control mb-3"
-        placeholder="Search by product name"
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-      />
+      {/* Search + Sort Controls */}
+      <div className="controls">
+        <input
+          type="text"
+          placeholder="Search products..."
+          className="searchBar"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
+        <div className="sort-buttons">
+          <button
+            onClick={() => setSortValue(1)}
+            className={sortValue === 1 ? 'active' : ''}
+          >
+            Asc
+          </button>
+          <button
+            onClick={() => setSortValue(-1)}
+            className={sortValue === -1 ? 'active' : ''}
+          >
+            Desc
+          </button>
+        </div>
+      </div>
 
-      <table className="table table-bordered table-hover shadow">
-        <thead className="table-primary">
+      {/* Product Table */}
+      <table className="product-table">
+        <thead>
           <tr>
             <th>Name</th>
-            <th>Category</th>
             <th>Brand</th>
-            <th>Price (₹)</th>
+            <th>Category</th>
+            <th>Price</th>
             <th>Action</th>
           </tr>
         </thead>
         <tbody>
-          {filtered.length ? (
-            filtered.map((p) => (
-              <tr key={p._id}>
-                <td>{p.name}</td>
-                <td>{p.category}</td>
-                <td>{p.brand}</td>
-                <td>{p.price}</td>
+          {products.length > 0 ? (
+            products.map((product) => (
+              <tr key={product._id}>
+                <td>{product.name}</td>
+                <td>{product.brand}</td>
+                <td>{product.category}</td>
+                <td>₹{product.price}</td>
                 <td>
                   <button
-                    className="btn btn-danger btn-sm"
-                    onClick={() => handleDelete(p._id)}
+                    className="view-btn"
+                    onClick={() => handleViewInfo(product)}
+                  >
+                    View Info
+                  </button>
+                </td>
+              </tr>
+            ))
+          ) : (
+            <tr>
+              <td colSpan="5" className="no-products">
+                No products found
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+
+      {/* Product Info Popup */}
+      {showPopup && selectedProduct && (
+        <div className="popup-overlay">
+          <div className="popup-content">
+            <button className="close-btn" onClick={closePopup}>×</button>
+            <h2>{selectedProduct.name}</h2>
+            <p><strong>Brand:</strong> {selectedProduct.brand}</p>
+            <p><strong>Category:</strong> {selectedProduct.category}</p>
+            <p><strong>Price:</strong> ₹{selectedProduct.price}</p>
+            <p><strong>Description:</strong> {selectedProduct.description}</p>
+            <p><strong>Gender:</strong> {selectedProduct.gender}</p>
+            <p><strong>Frame Type:</strong> {selectedProduct.frameType}</p>
+            <p><strong>Availability:</strong> {selectedProduct.availability}</p>
+            <hr />
+            <p><strong>Added By:</strong> {selectedProduct.userName}</p>
+            <p><strong>Email:</strong> {selectedProduct.userEmail}</p>
+            <p><strong>Phone:</strong> {selectedProduct.userPhone}</p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default DisplayProduct;
+.product-list-container {
+  font-family: 'Poppins', sans-serif;
+  padding: 20px 50px;
+  background-color: #f9f9fb;
+  min-height: 100vh;
+}
+
+/* Header */
+.header-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.logout-button {
+  background-color: #e63946;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.logout-button:hover {
+  background-color: #b71c1c;
+}
+
+/* Controls */
+.controls {
+  display: flex;
+  justify-content: space-between;
+  margin: 20px 0;
+}
+
+.searchBar {
+  width: 60%;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.sort-buttons button {
+  margin-left: 10px;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  background-color: #007bff;
+  color: white;
+}
+
+.sort-buttons button.active {
+  background-color: #0056b3;
+}
+
+/* Table */
+.product-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.product-table th,
+.product-table td {
+  padding: 12px 15px;
+  text-align: left;
+  border-bottom: 1px solid #ddd;
+}
+
+.product-table th {
+  background-color: #007bff;
+  color: white;
+}
+
+.view-btn {
+  background-color: #28a745;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.view-btn:hover {
+  background-color: #218838;
+}
+
+.no-products {
+  text-align: center;
+  color: #888;
+}
+
+/* Popup */
+.popup-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.popup-content {
+  background: white;
+  padding: 30px 40px;
+  border-radius: 10px;
+  width: 400px;
+  position: relative;
+}
+
+.close-btn {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  border: none;
+  background: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+}
+
+//CreateProduct.jsx
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
+import './CreateProduct.css';
+
+function CreateProduct() {
+  const navigate = useNavigate();
+
+  // ✅ State Management
+  const [productData, setProductData] = useState({
+    name: '',
+    brand: '',
+    description: '',
+    price: '',
+    category: '',
+    frameType: '',
+    gender: 'Unisex',
+    imageUrl: '',
+    availability: true
+  });
+
+  const [errors, setErrors] = useState({});
+  const [editId, setEditId] = useState(null);
+
+  // ✅ Fetch existing product if in edit mode
+  useEffect(() => {
+    const storedEditId = localStorage.getItem('editId');
+    if (storedEditId) {
+      setEditId(storedEditId);
+      fetchProduct(storedEditId);
+    }
+  }, []);
+
+  const fetchProduct = async (id) => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await axios.get(`http://localhost:8080/product/${id}`, {
+        headers: { Authorization: token }
+      });
+      setProductData(res.data);
+    } catch (error) {
+      console.error('Failed to fetch product:', error);
+      navigate('/error');
+    }
+  };
+
+  // ✅ Handle Input Change
+  const handleChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setProductData({
+      ...productData,
+      [name]: type === 'checkbox' ? checked : value
+    });
+  };
+
+  // ✅ Validate Input Fields
+  const validate = () => {
+    const newErrors = {};
+    if (!productData.name.trim()) newErrors.name = 'Product name is required';
+    if (!productData.brand.trim()) newErrors.brand = 'Brand is required';
+    if (!productData.description.trim()) newErrors.description = 'Description is required';
+    if (!productData.category.trim()) newErrors.category = 'Category is required';
+    if (!productData.price || isNaN(productData.price) || Number(productData.price) <= 0)
+      newErrors.price = 'Price must be a positive number';
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  // ✅ Submit Form (Add / Update)
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!validate()) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      const config = { headers: { Authorization: token } };
+
+      if (editId) {
+        // Update existing product
+        await axios.put(`http://localhost:8080/product/${editId}`, productData, config);
+      } else {
+        // Add new product
+        await axios.post('http://localhost:8080/product/addProduct', productData, config);
+      }
+
+      localStorage.removeItem('editId');
+      navigate('/manage-products');
+    } catch (error) {
+      console.error('Failed to submit product:', error);
+      navigate('/error');
+    }
+  };
+
+  // ✅ Back Navigation
+  const handleBack = () => {
+    navigate('/manage-products');
+  };
+
+  return (
+    <div className="create-product-container">
+      <h2>{editId ? 'Update Eyewear Product' : 'Create New Eyewear Product'}</h2>
+
+      <form onSubmit={handleSubmit} className="product-form">
+
+        {/* Product Name */}
+        <div className="form-group">
+          <label>Product Name</label>
+          <input
+            type="text"
+            name="name"
+            value={productData.name}
+            onChange={handleChange}
+            placeholder="Enter product name"
+          />
+          {errors.name && <p className="error">{errors.name}</p>}
+        </div>
+
+        {/* Brand */}
+        <div className="form-group">
+          <label>Brand</label>
+          <input
+            type="text"
+            name="brand"
+            value={productData.brand}
+            onChange={handleChange}
+            placeholder="Enter brand"
+          />
+          {errors.brand && <p className="error">{errors.brand}</p>}
+        </div>
+
+        {/* Description */}
+        <div className="form-group">
+          <label>Description</label>
+          <textarea
+            name="description"
+            value={productData.description}
+            onChange={handleChange}
+            placeholder="Enter description"
+          />
+          {errors.description && <p className="error">{errors.description}</p>}
+        </div>
+
+        {/* Price */}
+        <div className="form-group">
+          <label>Price (₹)</label>
+          <input
+            type="number"
+            name="price"
+            value={productData.price}
+            onChange={handleChange}
+            placeholder="Enter price"
+          />
+          {errors.price && <p className="error">{errors.price}</p>}
+        </div>
+
+        {/* Category */}
+        <div className="form-group">
+          <label>Category</label>
+          <select name="category" value={productData.category} onChange={handleChange}>
+            <option value="">--Select Category--</option>
+            <option value="Eyeglasses">Eyeglasses</option>
+            <option value="Sunglasses">Sunglasses</option>
+            <option value="Contact Lenses">Contact Lenses</option>
+            <option value="Accessories">Accessories</option>
+          </select>
+          {errors.category && <p className="error">{errors.category}</p>}
+        </div>
+
+        {/* Frame Type */}
+        <div className="form-group">
+          <label>Frame Type</label>
+          <select name="frameType" value={productData.frameType} onChange={handleChange}>
+            <option value="">--Select Frame Type--</option>
+            <option value="Full-Rim">Full-Rim</option>
+            <option value="Half-Rim">Half-Rim</option>
+            <option value="Rimless">Rimless</option>
+          </select>
+        </div>
+
+        {/* Gender */}
+        <div className="form-group">
+          <label>Gender</label>
+          <select name="gender" value={productData.gender} onChange={handleChange}>
+            <option value="Unisex">Unisex</option>
+            <option value="Men">Men</option>
+            <option value="Women">Women</option>
+          </select>
+        </div>
+
+        {/* Image URL */}
+        <div className="form-group">
+          <label>Image URL</label>
+          <input
+            type="text"
+            name="imageUrl"
+            value={productData.imageUrl}
+            onChange={handleChange}
+            placeholder="Enter image URL (optional)"
+          />
+        </div>
+
+        {/* Availability */}
+        <div className="form-group checkbox">
+          <label>
+            <input
+              type="checkbox"
+              name="availability"
+              checked={productData.availability}
+              onChange={handleChange}
+            />
+            Available
+          </label>
+        </div>
+
+        {/* Buttons */}
+        <div className="form-buttons">
+          <button type="button" className="back-btn" onClick={handleBack}>
+            Back
+          </button>
+          <button type="submit" className="submit-btn">
+            {editId ? 'Update Product' : 'Create Product'}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+export default CreateProduct;
+
+.create-product-container {
+  max-width: 600px;
+  margin: 40px auto;
+  padding: 30px;
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  font-family: 'Poppins', sans-serif;
+}
+
+.create-product-container h2 {
+  text-align: center;
+  margin-bottom: 20px;
+  color: #333;
+}
+
+.product-form .form-group {
+  margin-bottom: 15px;
+}
+
+label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 5px;
+}
+
+input, select, textarea {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+textarea {
+  resize: vertical;
+}
+
+.error {
+  color: red;
+  font-size: 0.9rem;
+  margin-top: 4px;
+}
+
+.form-group.checkbox {
+  display: flex;
+  align-items: center;
+}
+
+.form-buttons {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 20px;
+}
+
+.back-btn, .submit-btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.back-btn {
+  background-color: #6c757d;
+  color: white;
+}
+
+.submit-btn {
+  background-color: #007bff;
+  color: white;
+}
+
+.submit-btn:hover {
+  background-color: #0056b3;
+}
+
+//ManageProducts.jsx
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
+import './ManageProducts.css';
+
+function ManageProducts() {
+  const navigate = useNavigate();
+
+  // ✅ State Management
+  const [products, setProducts] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortValue, setSortValue] = useState(1);
+  const [showDeletePopup, setShowDeletePopup] = useState(false);
+  const [productToDelete, setProductToDelete] = useState(null);
+
+  // ✅ Reset editId and fetch data
+  useEffect(() => {
+    localStorage.removeItem('editId');
+    fetchProducts();
+    // eslint-disable-next-line
+  }, [searchTerm, sortValue]);
+
+  // ✅ Fetch User Products
+  const fetchProducts = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const userId = localStorage.getItem('userId');
+      if (!token || !userId) {
+        navigate('/login');
+        return;
+      }
+
+      const response = await axios.post(
+        `http://localhost:8080/product/getProductsByUserId?searchValue=${searchTerm}&sortValue=${sortValue}`,
+        { userId },
+        { headers: { Authorization: token } }
+      );
+
+      setProducts(response.data);
+    } catch (error) {
+      console.error('Error fetching products:', error);
+      navigate('/error');
+    }
+  };
+
+  // ✅ Logout handler
+  const handleLogout = () => {
+    localStorage.clear();
+    navigate('/login');
+  };
+
+  // ✅ Navigate to Add Product
+  const handleAddProduct = () => {
+    navigate('/createproduct');
+  };
+
+  // ✅ Handle Edit Product
+  const handleEdit = (id) => {
+    localStorage.setItem('editId', id);
+    navigate('/createproduct');
+  };
+
+  // ✅ Handle Delete Product
+  const handleDeleteClick = (id) => {
+    setProductToDelete(id);
+    setShowDeletePopup(true);
+  };
+
+  // ✅ Confirm Delete
+  const confirmDelete = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.delete(`http://localhost:8080/product/${productToDelete}`, {
+        headers: { Authorization: token }
+      });
+      setShowDeletePopup(false);
+      setProductToDelete(null);
+      fetchProducts();
+    } catch (error) {
+      console.error('Error deleting product:', error);
+      navigate('/error');
+    }
+  };
+
+  // ✅ Cancel Delete
+  const cancelDelete = () => {
+    setShowDeletePopup(false);
+    setProductToDelete(null);
+  };
+
+  return (
+    <div className="manage-products-container">
+      {/* Header Section */}
+      <div className="header">
+        <h1>Manage Products</h1>
+        <div>
+          <button className="add-btn" onClick={handleAddProduct}>Add Product</button>
+          <button className="logout-btn" onClick={handleLogout}>Logout</button>
+        </div>
+      </div>
+
+      {/* Search & Sort Controls */}
+      <div className="controls">
+        <input
+          type="text"
+          placeholder="Search by product name..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="search-bar"
+        />
+
+        <div className="sort-controls">
+          <button
+            onClick={() => setSortValue(1)}
+            className={sortValue === 1 ? 'active' : ''}
+          >
+            Asc
+          </button>
+          <button
+            onClick={() => setSortValue(-1)}
+            className={sortValue === -1 ? 'active' : ''}
+          >
+            Desc
+          </button>
+        </div>
+      </div>
+
+      {/* Products Table */}
+      <table className="product-table">
+        <thead>
+          <tr>
+            <th>Product Name</th>
+            <th>Brand</th>
+            <th>Price (₹)</th>
+            <th>Category</th>
+            <th>Gender</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {products.length > 0 ? (
+            products.map((product) => (
+              <tr key={product._id}>
+                <td>{product.name}</td>
+                <td>{product.brand}</td>
+                <td>{product.price}</td>
+                <td>{product.category}</td>
+                <td>{product.gender}</td>
+                <td>
+                  <button
+                    className="edit-btn"
+                    onClick={() => handleEdit(product._id)}
+                  >
+                    Edit
+                  </button>
+                  <button
+                    className="delete-btn"
+                    onClick={() => handleDeleteClick(product._id)}
                   >
                     Delete
                   </button>
@@ -864,207 +1686,236 @@ const ManageProducts = () => {
             ))
           ) : (
             <tr>
-              <td colSpan="5" className="text-center">
-                No products found
-              </td>
+              <td colSpan="6" className="no-records">No records found</td>
             </tr>
           )}
         </tbody>
       </table>
+
+      {/* Delete Confirmation Popup */}
+      {showDeletePopup && (
+        <div className="popup-overlay">
+          <div className="popup-content">
+            <h3>Are you sure you want to delete this product?</h3>
+            <div className="popup-buttons">
+              <button className="confirm-btn" onClick={confirmDelete}>Yes, Delete</button>
+              <button className="cancel-btn" onClick={cancelDelete}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
-};
+}
 
 export default ManageProducts;
 
+.manage-products-container {
+  font-family: 'Poppins', sans-serif;
+  padding: 30px 50px;
+  background-color: #f9f9fb;
+  min-height: 100vh;
+}
 
-15) src/employee/DisplayProduct.jsx
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
 
+.header h1 {
+  color: #333;
+}
 
-import React, { useEffect, useState } from "react";
-import "bootstrap/dist/css/bootstrap.min.css";
+.add-btn, .logout-btn {
+  padding: 8px 14px;
+  margin-left: 10px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  color: white;
+}
 
-const DisplayProduct = () => {
-  const [products, setProducts] = useState([]);
+.add-btn {
+  background-color: #28a745;
+}
 
-  useEffect(() => {
-    // dummy products (replace with API fetch)
-    setProducts([
-      { id: 1, name: "Classic Aviator", category: "Sunglasses", brand: "RayBan", price: 2999 },
-      { id: 2, name: "Smart Vision", category: "Eyeglasses", brand: "Titan", price: 2499 },
-    ]);
-  }, []);
+.add-btn:hover {
+  background-color: #218838;
+}
 
+.logout-btn {
+  background-color: #e63946;
+}
+
+.logout-btn:hover {
+  background-color: #b71c1c;
+}
+
+/* Controls */
+.controls {
+  display: flex;
+  justify-content: space-between;
+  margin: 20px 0;
+}
+
+.search-bar {
+  width: 60%;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.sort-controls button {
+  margin-left: 8px;
+  padding: 8px 12px;
+  background-color: #007bff;
+  border: none;
+  color: white;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.sort-controls button.active {
+  background-color: #0056b3;
+}
+
+/* Table */
+.product-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.product-table th, .product-table td {
+  padding: 12px 15px;
+  border-bottom: 1px solid #ddd;
+  text-align: left;
+}
+
+.product-table th {
+  background-color: #007bff;
+  color: white;
+}
+
+.edit-btn, .delete-btn {
+  padding: 6px 12px;
+  margin-right: 5px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  color: white;
+}
+
+.edit-btn {
+  background-color: #17a2b8;
+}
+
+.edit-btn:hover {
+  background-color: #138496;
+}
+
+.delete-btn {
+  background-color: #dc3545;
+}
+
+.delete-btn:hover {
+  background-color: #b02a37;
+}
+
+.no-records {
+  text-align: center;
+  color: #888;
+}
+
+/* Popup */
+.popup-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.4);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.popup-content {
+  background: white;
+  padding: 30px;
+  border-radius: 10px;
+  text-align: center;
+}
+
+.popup-buttons {
+  margin-top: 20px;
+  display: flex;
+  justify-content: space-around;
+}
+
+.confirm-btn {
+  background-color: #e63946;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.cancel-btn {
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+//App.js
+import React from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+
+// ✅ Import all components
+import Login from './components/Login';
+import Register from './components/Register';
+import CreateProduct from './components/CreateProduct';
+import ManageProducts from './components/ManageProducts';
+import DisplayProduct from './components/DisplayProduct';
+import ErrorPage from './components/ErrorPage';
+
+// ✅ App Component
+function App() {
   return (
-    <div className="container mt-5">
-      <h2 className="text-center mb-4">Available Products</h2>
-      <div className="row">
-        {products.map((p) => (
-          <div className="col-md-4 mb-4" key={p.id}>
-            <div className="card shadow-sm h-100">
-              <div className="card-body">
-                <h5 className="card-title">{p.name}</h5>
-                <p className="card-text mb-1">Category: {p.category}</p>
-                <p className="card-text mb-1">Brand: {p.brand}</p>
-                <p className="card-text fw-bold">Price: ₹{p.price}</p>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
-
-export default DisplayProduct;
-
-
-
-16) src/components/Navbar.jsx
-
-import React from "react";
-import { Link } from "react-router-dom";
-import "bootstrap/dist/css/bootstrap.min.css";
-
-const Navbar = () => {
-  return (
-    <nav className="navbar navbar-expand-lg navbar-dark bg-dark shadow">
-      <div className="container-fluid">
-        <Link className="navbar-brand fw-bold" to="/">
-          EyeWear Pro
-        </Link>
-        <button
-          className="navbar-toggler"
-          type="button"
-          data-bs-toggle="collapse"
-          data-bs-target="#navbarNav"
-          aria-controls="navbarNav"
-          aria-expanded="false"
-          aria-label="Toggle navigation"
-        >
-          <span className="navbar-toggler-icon"></span>
-        </button>
-        <div className="collapse navbar-collapse" id="navbarNav">
-          <ul className="navbar-nav ms-auto">
-            <li className="nav-item">
-              <Link className="nav-link" to="/login">
-                Login
-              </Link>
-            </li>
-            <li className="nav-item">
-              <Link className="nav-link" to="/register">
-                Register
-              </Link>
-            </li>
-            <li className="nav-item dropdown">
-              <a
-                className="nav-link dropdown-toggle"
-                href="/#"
-                id="managerDropdown"
-                role="button"
-                data-bs-toggle="dropdown"
-                aria-expanded="false"
-              >
-                Manager
-              </a>
-              <ul className="dropdown-menu" aria-labelledby="managerDropdown">
-                <li>
-                  <Link className="dropdown-item" to="/manager/create">
-                    Create Product
-                  </Link>
-                </li>
-                <li>
-                  <Link className="dropdown-item" to="/manager/manage">
-                    Manage Products
-                  </Link>
-                </li>
-              </ul>
-            </li>
-            <li className="nav-item">
-              <Link className="nav-link" to="/employee">
-                Employee
-              </Link>
-            </li>
-          </ul>
-        </div>
-      </div>
-    </nav>
-  );
-};
-
-export default Navbar;
-
-
-
-17) src/components/HomePage.jsx
-
-
- import React from "react";
-import "bootstrap/dist/css/bootstrap.min.css";
-
-const HomePage = () => {
-  return (
-    <div className="d-flex flex-column justify-content-center align-items-center vh-100 bg-light text-center">
-      <h1 className="display-4 fw-bold mb-3">Welcome to EyeWear Catalogue</h1>
-      <p className="lead w-75">
-        Manage, view, and explore eyewear products effortlessly. This platform
-        lets managers create and manage products while employees can view them.
-      </p>
-      <a href="/login" className="btn btn-primary mt-3">
-        Get Started
-      </a>
-    </div>
-  );
-};
-
-export default HomePage;
-
-
-18) src/App.js
-
-import React from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import "bootstrap/dist/css/bootstrap.min.css";
-import Navbar from "./components/Navbar";
-import HomePage from "./components/HomePage";
-import Login from "./components/Login";
-import Register from "./components/Register";
-import ErrorPage from "./components/ErrorPage";
-import CreateProduct from "./manager/CreateProduct";
-import ManageProducts from "./manager/ManageProducts";
-import DisplayProduct from "./employee/DisplayProduct";
-
-const App = () => {
-  return (
-    <Router>
-      <Navbar />
+    <BrowserRouter>
       <Routes>
-        <Route path="/" element={<HomePage />} />
+
+        {/* Authentication Routes */}
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
-        <Route path="/manager/create" element={<CreateProduct />} />
-        <Route path="/manager/manage" element={<ManageProducts />} />
-        <Route path="/employee" element={<DisplayProduct />} />
-        <Route path="*" element={<ErrorPage />} />
+
+        {/* Manager Routes */}
+        <Route path="/createproduct" element={<CreateProduct />} />
+        <Route path="/manage-products" element={<ManageProducts />} />
+
+        {/* Employee Route */}
+        <Route path="/product-catalog" element={<DisplayProduct />} />
+
+        {/* Error Route */}
+        <Route path="/error" element={<ErrorPage />} />
+
+        {/* Default / Wildcard Route */}
+        <Route path="*" element={<Navigate to="/login" replace />} />
+
       </Routes>
-    </Router>
+    </BrowserRouter>
   );
-};
+}
 
 export default App;
 
+//
+apiconfig.js
+export const apiUrl = 'http://localhost:8080';
 
-19) index.js
-
-import React from "react";
-import ReactDOM from "react-dom/client";
-import App from "./App";
-import "bootstrap/dist/css/bootstrap.min.css";
-import "bootstrap/dist/js/bootstrap.bundle.min.js";
-
-const root = ReactDOM.createRoot(document.getElementById("root"));
-root.render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
-);
